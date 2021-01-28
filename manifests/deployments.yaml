@@ -1,0 +1,258 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nucleon
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: nucleons.cluster.atom.io
+spec:
+  group: cluster.atom.io
+  names:
+    kind: Nucleon
+    listKind: NucleonList
+    plural: nucleons
+    singular: nucleon
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: Nucleon is the Schema for the nucleons API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: NucleonSpec defines the desired state of Nucleon
+              properties:
+                addons:
+                  items:
+                    description: 用户自定义插件
+                    properties:
+                      chart:
+                        description: 使用 helm 安装自定义插件
+                        properties:
+                          name:
+                            type: string
+                          repo:
+                            type: string
+                          values:
+                            items:
+                              type: string
+                            type: array
+                          version:
+                            type: string
+                        required:
+                          - name
+                        type: object
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      yaml:
+                        description: 使用 yaml 文件安装自定义插件
+                        properties:
+                          paths:
+                            items:
+                              type: string
+                            type: array
+                        required:
+                          - paths
+                        type: object
+                    required:
+                      - name
+                      - namespace
+                    type: object
+                  type: array
+                apiserver:
+                  description: atom apiserver components
+                  properties:
+                    alerting:
+                      description: 报警组件 必须启动监控组件
+                      properties:
+                        alert_manager:
+                          properties:
+                            replicas:
+                              format: int32
+                              type: integer
+                          required:
+                            - replicas
+                          type: object
+                      type: object
+                    enable:
+                      type: boolean
+                    logging:
+                      description: 日志组件 目前使用 Loki+Promtail，其他可选方案有 EFK 等
+                      properties:
+                        loki:
+                          properties:
+                            replicas:
+                              format: int32
+                              type: integer
+                          required:
+                            - replicas
+                          type: object
+                      type: object
+                    monitoring:
+                      description: 监控组件 Prometheus only
+                      properties:
+                        prometheus:
+                          properties:
+                            replicas:
+                              format: int32
+                              type: integer
+                          required:
+                            - replicas
+                          type: object
+                      type: object
+                  type: object
+                cluster_manager:
+                  description: cluster-manager components
+                  properties:
+                    agents:
+                      description: ClusterManager agents
+                      properties:
+                        spot_instance:
+                          type: object
+                      type: object
+                    autoscaler:
+                      description: 集群节点自动伸缩组件 目前的唯一方案是 kubernetes/autoscaler/cluster-autoscaler
+                      properties:
+                        cluster_autoscaler:
+                          properties:
+                            cloud_provider:
+                              type: string
+                          required:
+                            - cloud_provider
+                          type: object
+                      type: object
+                    enable:
+                      type: boolean
+                    storage:
+                      description: 存储组件 在 InstanceGroup 中配置使用 目前使用 OpenEBS，其他可选方案有 Rook+Ceph
+                        等
+                      properties:
+                        openebs:
+                          properties:
+                            device:
+                              type: string
+                          required:
+                            - device
+                          type: object
+                      type: object
+                  type: object
+                nucleus:
+                  description: nucleus components
+                  properties:
+                    ci:
+                      description: CI 组件 目前使用 Tekton，其他可选方案有 Jenkins 等
+                      properties:
+                        tekton:
+                          type: object
+                      type: object
+                    enable:
+                      type: boolean
+                    ingress:
+                      description: Ingress 目前使用 Traefik，其他可选方案有 Kong 等
+                      properties:
+                        traefik:
+                          type: object
+                      type: object
+                    registry:
+                      description: Image registry CI 组件使用的镜像仓库 目前使用 docker registry，其他可选方案有
+                        Harbor 等
+                      properties:
+                        docker_registry:
+                          properties:
+                            port:
+                              format: int32
+                              type: integer
+                          required:
+                            - port
+                          type: object
+                      type: object
+                  type: object
+              type: object
+            status:
+              description: NucleonStatus defines the observed state of Nucleon
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nucleon
+  namespace: nucleon
+
+---
+# TODO 不应该直接使用 admin 权限
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nucleon
+subjects:
+  - kind: ServiceAccount
+    name: nucleon
+    namespace: nucleon
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nucleon
+  namespace: nucleon
+  labels:
+    app: nucleon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nucleon
+  template:
+    metadata:
+      labels:
+        app: nucleon
+    spec:
+      serviceAccountName: nucleon
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - command:
+            - nucleon
+          args:
+            - --enable-leader-election
+          image: "zoomicro/nucleon:latest"
+          name: nucleon
+      terminationGracePeriodSeconds: 10
+
