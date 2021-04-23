@@ -1,0 +1,27 @@
+apiVersion: cluster.atom.io/v1alpha1
+kind: Nucleon
+metadata:
+  name: nucleon
+spec:
+  nucleus:
+    enable: true
+    registry:
+      docker_registry:
+        port: 6447
+    ci:
+      tekton: {}
+    ingress:
+      traefik: {}
+  apiserver:
+    enable: true
+    monitoring:
+      prometheus:
+        replicas: 1
+    alerting:
+      alert_manager:
+        replicas: 1
+    logging:
+      loki:
+        replicas: 1
+  cluster_manager:
+    enable: false
