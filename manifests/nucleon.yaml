@@ -35,3 +35,19 @@ spec:
         cloud_provider: atom
     agents:
       spot_instance: {}
+  addons:
+    - name: mysql-operator
+      namespace: addons
+      chart:
+        name: mysql-operator
+        repo: https://presslabs.github.io/charts
+    - name: rabbitmq-operator
+      namespace: rabbitmq-system
+      yaml:
+        paths:
+          - https://github.com/rabbitmq/cluster-operator/releases/download/v1.7.0/cluster-operator.yml
+    - name: redis-operator
+      namespace: default
+      yaml:
+        paths:
+          - https://raw.githubusercontent.com/spotahome/redis-operator/master/example/operator/all-redis-operator-resources.yaml

@@ -147,6 +147,13 @@ spec:
                       description: 存储组件 在 InstanceGroup 中配置使用 目前使用 OpenEBS，其他可选方案有 Rook+Ceph
                         等
                       properties:
+                        local_path:
+                          properties:
+                            device:
+                              type: string
+                          required:
+                            - device
+                          type: object
                         openebs:
                           properties:
                             device:
@@ -253,6 +260,7 @@ spec:
           args:
             - --enable-leader-election
           image: "zoomicro/nucleon:latest"
+          imagePullPolicy: "Always"
           name: nucleon
       terminationGracePeriodSeconds: 10
 
